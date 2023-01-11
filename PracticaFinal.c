@@ -186,7 +186,7 @@ int main(int argc, char* argv[]){
     
     /*Bucle infinito*/
 
-    while(true){
+    while(1){
         pause();
     }
     return 0;
