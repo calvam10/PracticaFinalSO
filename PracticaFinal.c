@@ -120,28 +120,17 @@ int main(int argc, char* argv[]){
     contador_ID_App = 0;
     contador_ID_Red = 0;
 
-    /*Inicializamos a los clientes sin determinar si son de App o de Red*/
-
-    clientes = ((clientes*)malloc(max_num_cola*sizeof(clientes)));
-    for(int i =0;i<max_num_cola;i++){
-        //mutex?
-        Clientes[i].id = 0;
-        Clientes[i].atendido = 0;
-        Clientes[i].prioridad = 0;
-        Clientes[i].solicitud = 0;
-    }
-
     /*Inicializamos a los Tecnicos*/
 
     Tecnicos = (trabajadores*)malloc(num_tecnicos*sizeof(trabajadores));
     for(int i =0;i<num_tecnicos;i++){
         //mutex?
-        Tecnicos[i].id =0;
+        Tecnicos[i].id =i;
         Tecnicos[i].descanso = 0;
         Tecnicos[i].ocupado = 0;
         Tecnicos[i].contador = 0;
-        pthread_create(&Tecnicos[i].hilo,NULL,AccionTecnico(),(*void) Tecnicos[i]);
-        if(pthread_create(&Tecnicos[i].hilo,NULL,AccionTecnico(),(*void) Tecnicos[i])!=0){
+        pthread_create(&Tecnicos[i].hilo,NULL,AccionTecnico(),(void *) Tecnicos[i]);
+        if(pthread_create(&Tecnicos[i].hilo,NULL,AccionTecnico(),(void *) Tecnicos[i])!=0){
             perror("Error en la creacion del hilo");
             exit(-1);
         }
@@ -152,12 +141,12 @@ int main(int argc, char* argv[]){
     Responsables = (trabajadores*)malloc(num_responsables*sizeof(trabajadores));
     for(int i =0;i<num_responsables;i++){
         //mutex?
-        Responsables[i].id =0;
+        Responsables[i].id =i;
         Responsables[i].descanso = 0;
         Responsables[i].ocupado = 0;
         Responsables[i].contador = 0;
-        pthread_create(&Responsables[i].hilo,NULL,AccionesResponsables(),(*void) Responsables[i]);
-        if(pthread_create(&Responsables[i].hilo,NULL,AccionesResponsables(),(*void) Responsables[i])!=0){
+        pthread_create(&Responsables[i].hilo,NULL,AccionesResponsables(),(void *) Responsables[i]);
+        if(pthread_create(&Responsables[i].hilo,NULL,AccionesResponsables(),(void *) Responsables[i])!=0){
             perror("Error en la creacion del hilo");
             exit(-1);
         }
@@ -168,12 +157,12 @@ int main(int argc, char* argv[]){
     Encargado = (trabajadores*)malloc(num_encargado*sizeof(trabajadores));
     for(int i =0;i<num_tecnicos;i++){
         //mutex?
-        Encargado[i].id =0;
+        Encargado[i].id =i;
         Encargado[i].descanso = 0;
         Encargado[i].ocupado = 0;
         Encargado[i].contador = 0;
-        pthread_create(&Encargado[i].hilo,NULL,AccionEncargado(),(*void) Encargado[i]);
-        if(pthread_create(&Encargado[i].hilo,NULL,AccionEncargado(),(*void) Encargado[i])!=0){
+        pthread_create(&Encargado[i].hilo,NULL,AccionEncargado(),(void *) Encargado[i]);
+        if(pthread_create(&Encargado[i].hilo,NULL,AccionEncargado(),(void *) Encargado[i])!=0){
             perror("Error en la creacion del hilo");
             exit(-1);
         }
@@ -181,7 +170,7 @@ int main(int argc, char* argv[]){
 
     /*Ficheros*/
 
-    ficheroLog=fopen("registroTiemposLog.log","wt");
+    ficheroLog=fopen("registroTiempos.log","wt");
 	fclose(ficheroLog);
 
     //Variables Atencion Domiciliaria
@@ -224,8 +213,6 @@ void nuevoClienteRed(int signal){
             break;
         }
         
-    
-        pthread_create(&thread_id, NULL, myThreadFun, NULL);//Corregir
         pthread_mutex_unlock(&mutexCola);
     }else{
         printf("La cola de atencion esta llena\n");
@@ -236,7 +223,7 @@ int obtenerPosicion(int indice){
     int posicion = 0;
     if(Cliente.tipo==0){ /*En el caso que el cliente sea de App*/
         for(int i=0;i<num_clie_app;i++){
-            if(Cliente.id==indice){
+            if(Cliente[i].id==indice){
                 return posicion;
             }
             posicion++;
@@ -244,7 +231,7 @@ int obtenerPosicion(int indice){
 
     }else{
         for(int i=0;i<num_clie_red;i++){
-            if(Cliente.id==indice){
+            if(Cliente[i].id==indice){
                 return posicion;
             }
             posicion++;
@@ -261,12 +248,12 @@ void AccionCliente(void *Cliente){
     if(Cliente.tipo==0){
         pthread_mutex_lock(&mutexLog);
         sprintf(TipoCliente,"El cliente es de Tipo App");
-        writeLogMessage(logFile,TipoCliente);
+        writeLogMessage(ficheroLog,TipoCliente);
         pthread_mutex_unlock(&mutexLog);
     }else{
         pthread_mutex_lock(&mutexLog);
         sprintf(TipoCliente,"El cliente es de Tipo Red");
-        writeLogMessage(logFile,TipoCliente);
+        writeLogMessage(ficheroLog,TipoCliente);
         pthread_mutex_unlock(&mutexLog);
     }
 
@@ -276,18 +263,18 @@ void AccionCliente(void *Cliente){
         int dificultad =calculaAleatorios(1,100);
         if(dificultad<11){ /*Encuentran dificil la aplicacion y se van de inmediato*/
             sprintf(MotivoSalida,"El cliente encuentra dificil la aplicacion y abandona de inmediato la aplicacion");
-            writeLogMessage(logFile,MotivoSalida);
+            writeLogMessage(ficheroLog,MotivoSalida);
             break;
         }else if(dificultad<31){  /*Se cansa de esperar y sale de la aplicacion despues de 8 segundos*/
             sleep(8);
             sprintf(MotivoSalida,"El cliente se ha cansado de esperar y abandona la aplicacion");
-            writeLogMessage(logFile,MotivoSalida);
+            writeLogMessage(ficheroLog,MotivoSalida);
             break;
         }else{
             int aleatorio = calculaAleatorios(1,100);
             if(aleatorio<6){
                 sprintf(MotivoSalida,"El cliente ha perdido la conexion y abandona la aplicacion");
-                writeLogMessage(logFile,MotivoSalida);
+                writeLogMessage(ficheroLog,MotivoSalida);
                 break;
             }else{ /*El usuario permanece en la aplicacion*/
                 sleep(2);
@@ -304,7 +291,7 @@ void AccionCliente(void *Cliente){
     if(Cliente.tipo==1 && Cliente.solicitud==1){
         int atencion = calculaAleatorios(1,100);
         if(atencion<31){
-            if(cliente.tipo ==1 && cliente.solicitud==2){ /*Si es Cliente de Red*/
+            if(Cliente.tipo ==1 && Cliente.solicitud==2){ /*Si es Cliente de Red*/
             while(num_solicitudes<4){ 
                 if(num_solicitudes<4){
                     pthread_mutex_lock(&mutexSolicitud);
@@ -406,12 +393,12 @@ void AccionTecnico(void *Tecnico){
             pthread_mutex_lock(&mutexDescanso);
             pthread_mutex_lock(&mutexLog);
             sprintf(descanso,"Inicia el descando del tecnico");
-            writeLogMessage(logFile,descanso);
+            writeLogMessage(ficheroLog,descanso);
             Tecnico.descanso = 1;
             sleep(5);
             Tecnicos->descanso = 0;
             sprintf(findescanso,"Termina el descando del tecnico");
-            writeLogMessage(logFile,findescanso);
+            writeLogMessage(ficheroLog,findescanso);
             pthread_mutex_unlock(&mutexLog);
             pthread_mutex_unlock(&mutexDescanso);
         }
@@ -424,14 +411,24 @@ void AccionTecnico(void *Tecnico){
 
 int CalculaMaximaPrioridad(clientes *clientes){
     int maximo =0;
-    int i=0;
-    while(clientes[i]!=NULL){
-        if(clientes[i].atendido==0){
-            if(clientes[i].prioridad>maximo){
-                maximo = clientes[i].prioridad;
+    if(clientes->tipo==0){ /*Si es cliente de App*/
+        for(int i=0;i<num_clie_app;i++){
+            if(clientes[i].atendido==0){
+                if(clientes[i].prioridad>maximo){
+                    maximo = clientes[i].prioridad; 
+                }
+
             }
         }
-        i++;
+    }else{
+       for(int i=0;i<num_clie_red;i++){ /*Si es cliente de Red*/
+            if(clientes[i].atendido==0){
+                if(clientes[i].prioridad>maximo){
+                    maximo = clientes[i].prioridad;
+                }
+
+            } 
+       }
     }
     return maximo;
 
@@ -504,12 +501,12 @@ void AccionesResponsables(void *Responsable){
 
             }
         }
-        Responsable.contador +=1;
-        if(Responsable.contador%6==0){
+        Responsable->contador +=1;
+        if(Responsable->contador%6==0){
             pthread_mutex_lock(&mutexDescanso);
-            Responsable.descanso = 1;
+            Responsable->descanso = 1;
             sleep(5);
-            Responsable.descanso = 0;
+            Responsable->descanso = 0;
             pthread_mutex_unlock(&mutexDescanso);
         }
         pthread_mutex_unlock(&mutexCola);
@@ -742,9 +739,9 @@ void writeLogMessage ( char * id , char * msg ) {
     char stnow [25];
     strftime ( stnow , 25 , " %d/ %m/ %y %H: %M: %S", tlocal );
     // Escribimos en el log
-    logFile = fopen ( logFileName , "a");
-    fprintf ( logFile , "[ %s] %s: %s\n", stnow , id , msg ) ;
-    fclose ( logFile );
+    ficheroLog = fopen ( "registroTiempos.log" , "a");
+    fprintf ( ficheroLog , "[ %s] %s: %s\n", stnow , id , msg ) ;
+    fclose ( ficheroLog );
 }
 
 /*Funcion que calcula numeros aleatorios*/
