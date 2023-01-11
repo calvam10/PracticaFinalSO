@@ -32,6 +32,9 @@ pthread_mutex_t mutexDescanso;
 pthread_mutex_t mutexAtendido;
 pthread_mutex_t mutexSolicitud;
 
+pthread_cond_t InicioAtencionDomiciliaria;
+pthread_cond_t FinAtencionDomiciliaria;
+
 int num_clie_app;  //Contador Clientes App
 int num_clie_red;  //Contador Clientes Red
 int num_solicitudes; //Contador Solicitudes Atención Domiciliaria
@@ -89,8 +92,7 @@ int main(int argc, char* argv[]){
     if((sigaction(SIGUSR2,&e,NULL))==-1){
         perror("Error al recibir la llamada SIGUSR2\n");
         exit(-1);
-        } 
-	}
+    } 
     if(signal(SIGINT,salirPrograma)==SIG_ERR){	
 		//salimos del programa
 		exit(-1);
@@ -105,6 +107,8 @@ int main(int argc, char* argv[]){
     pthread_mutex_init(&mutexDescanso,NULL);
     pthread_mutex_init(&mutexAtendido,NULL);
     pthread_mutex_init(&mutexSolicitud,NULL);
+    pthread_cond_init(&InicioAtencionDomiciliaria);
+    pthread_cond_init(&FinAtencionDomiciliaria);
 
     /*Variables numéricas*/
 
@@ -190,7 +194,7 @@ int main(int argc, char* argv[]){
         pause();
     }
     return 0;
-
+}
 
 void nuevoClienteRed(int signal){
     if(numclientes<max_num_cola){
@@ -295,7 +299,7 @@ void AccionCliente(void *Cliente){
     }
     if(Cliente.tipo==1 && Cliente.solicutud==1){
         int atencion = calculaAleatorios(1,100);
-        if(atendido<31){
+        if(atencion<31){
             if(clientes.tipo ==1 && clientes.solicutud==2){ /*Si es Cliente de Red*/
             while(num_solicitudes<4){ 
                 if(num_solicitudes<4){
@@ -311,7 +315,7 @@ void AccionCliente(void *Cliente){
                         pthread_mutex_lock(&mutexSolicitud);
                         pthread_cond_signal(&InicioAtencionDomiciliaria);
 
-                        pthread_cond_wait(&FinAtencionDomiciliaria,mutexSolicitud);
+                        pthread_cond_wait(&FinAtencionDomiciliaria,&mutexSolicitud);
                         pthread_mutex_lock(&mutexLog);
                         sprintf(FinEspera,"El cliente ya ha sido atendido");
                         writeLogMessage(ficheroLog,FinEspera);
@@ -327,7 +331,7 @@ void AccionCliente(void *Cliente){
     }
     }else{ /*Si es cliente de App o no realiza solicitud domiciliaria */
         if(Cliente.tipo==0){  /*Si es Cliente de App*/
-            int aux = obtenerPosicion(Cliente.id)
+            int aux = obtenerPosicion(Cliente.id);
             eliminarClienteApp(aux);
         }else{
             int aux = obtenerPosicion(Cliente.id);
@@ -341,7 +345,7 @@ void AccionCliente(void *Cliente){
 
 void AccionTecnico(void *Tecnico){
     while(1){
-        char MotivoFin[100];
+        char motivoFin[100];
         char mensajeInicio[100];
         char mensajeFinal[100];
         char descanso[100];
@@ -401,7 +405,7 @@ void AccionTecnico(void *Tecnico){
             writeLogMessage(logFile,descanso);
             Tecnico.descanso = 1;
             sleep(5);
-            Tecnicos.descanso = 0;
+            Tecnicos->descanso = 0;
             sprintf(findescanso,"Termina el descando del tecnico");
             writeLogMessage(logFile,findescanso);
             pthread_mutex_unlock(&mutexLog);
@@ -431,7 +435,7 @@ int CalculaMaximaPrioridad(clientes *clientes){
 }
 void AccionesResponsables(void *Responsable){
     while(1){
-        char MotivoFin[100];
+        char motivoFin[100];
 	    char mensajeInicio[100];
         char mensajeFinal[100];
         char descanso[100];
@@ -444,7 +448,7 @@ void AccionesResponsables(void *Responsable){
                     pthread_mutex_lock(&mutexAtendido);
                     Clientes_Red[i].atendido = 1;
                     pthread_mutex_unlock(&mutexAtendido);
-                    int numeroAleatorio = calculaAleatorios(1,100)
+                    int numeroAleatorio = calculaAleatorios(1,100);
                     if(numeroAleatorio<81){
                         pthread_mutex_lock(&mutexLog);
                         sprintf(mensajeInicio,"Comienza la atencion del cliente");
@@ -452,7 +456,7 @@ void AccionesResponsables(void *Responsable){
                         sleep(calculaAleatorios(1,4));
                         sprintf(mensajeFinal,"Termina la atencion del cliente");
                         writeLogMessage(ficheroLog,mensajeFinal);
-                        int atencion = numeroAleatorio(1,10);
+                        int atencion = calculaAleatorios(1,10);
                         if(atencion<4){
                             Clientes_Red[i].solicutud=1;
                             sprintf(motivoFin,"El cliente tiene todo en regla y  solicita atencion domiciliaria, por lo que sigue en el programa esperando");
@@ -461,7 +465,7 @@ void AccionesResponsables(void *Responsable){
                             sprintf(motivoFin,"El cliente tiene todo en regla y no solicita atencion domiciliaria, por lo que abandona el programa ");
                             writeLogMessage(ficheroLog,motivoFin);
                         }
-                        pthread_mutex_unlock(&mutexLog)
+                        pthread_mutex_unlock(&mutexLog);
                     }else if(numeroAleatorio<91){
                         pthread_mutex_lock(&mutexLog);
                         sprintf(mensajeInicio,"Comienza la atencion del cliente");
@@ -469,7 +473,7 @@ void AccionesResponsables(void *Responsable){
                         sleep(calculaAleatorios(2,6));
                         sprintf(mensajeFinal,"Termina la atencion del cliente");
                         writeLogMessage(ficheroLog,mensajeFinal);
-                        int atencion = numeroAleatorio(1,10);
+                        int atencion = calculaAleatorios(1,10);
                         if(atencion<4){
                             Clientes_Red[i].solicutud=1;
                             sprintf(motivoFin,"El Cliente no se ha identificado correctamente y solicita atencion domiciliaria, por lo que continua el programa esperando");
@@ -478,7 +482,7 @@ void AccionesResponsables(void *Responsable){
                             sprintf(motivoFin,"El Cliente no se ha identificado correctamente y no solicita atencion domiciliaria, por lo que abandona el programa");
                             writeLogMessage(ficheroLog,motivoFin);
                         }
-                        pthread_mutex_unlock(&mutexLog)
+                        pthread_mutex_unlock(&mutexLog);
                     }else{
                         pthread_mutex_lock(&mutexLog);
                         sprintf(mensajeInicio,"Comienza la atencion del cliente");
@@ -513,13 +517,17 @@ void AccionesResponsables(void *Responsable){
 
 void AccionEncargado(void *Encargado){
     while(1){
+        char mensajeInicio[100];
+        char mensajeFinal[100];
+        char motivoFin[100];
+
         if(num_clie_red==0){ /*En el caso que no haya Clientes de Red miramos si hay de App*/
             if(num_clie_app==0){ /*En el caso que no haya Clientes en la cola dormimos y volvemos a comprobar en 3 segundas*/
                 sleep(3);
             }else{ /*En el caso que haya Clientes de App los tratamos*/
                 for(int i=0;i<num_clie_app;i++){
                     int prioridadApp = CalculaMaximaPrioridad(Clientes_App);
-                    if(Clientes_App[i].prioridadApp==prioridadApp){
+                    if(Clientes_App[i].prioridad==prioridadApp){
                         pthread_mutex_lock(&mutexAtendido);
                         Clientes_App[i].atendido = 1;
                         pthread_mutex_unlock(&mutexAtendido);
@@ -669,7 +677,7 @@ void AccionTecnicoDomiciliario(void *Cliente){
     while(1) {
         pthread_mutex_lock(&mutexDescanso);
         while(num_solicitudes<4){ //Si no esta lleno    
-            pthread_cond_wait(&InicioAtencionDomiciliaria, &mutexSolicitud)
+            pthread_cond_wait(&InicioAtencionDomiciliaria, &mutexSolicitud);
         }
         pthread_mutex_lock(&mutexLog);
         sprintf(ComienzoAtencion,"Comienza la solicitud");
@@ -681,9 +689,9 @@ void AccionTecnicoDomiciliario(void *Cliente){
             sprintf(Atencion,"Ha atendido una solicitud");
             writeLogMessage(ficheroLog, Atencion);
             pthread_mutex_unlock(&mutexLog);     
-            pthread_mutex_lock(&mutex)mutexSolicitud;
-            Clientes.solicutud = 0;
-            pthread_mutex_unlock(&mutex)mutexSolicitud;          
+            pthread_mutex_lock(&mutexSolicitud  );
+            Cliente.solicutud = 0;
+            pthread_mutex_unlock(&mutexSolicitud);          
             pthread_mutex_lock(&mutexLog);
             sprintf(FinAtencion,"Ha finalizado la solicitud");
             writeLogMessage(ficheroLog, FinAtencion);
@@ -758,8 +766,14 @@ void finalizarPrograma (int signal) {
     //Se ponen las solicitudes domiciliarias a 0
     num_solicitudes = 0;
 
+    for(int i=0;i<num_clie_app;i++){
+        pthread_mutex_lock(&mutexSolicitud);
+        Clientes_App[i].solicitud = 0;
+        pthread_mutex_unlock(&mutexSolicitud);
+    }
+
     //A cada cliente se le cambia la flag de solicitud a 0 y espera a que termine de ser atendido para finalizar los hilos de los trabajadores
-    for (int i = 0; i < Clientes_Red; i++) {
+    for (int i = 0; i < num_clie_red; i++) {
         pthread_mutex_lock(&mutexSolicitud);
         Clientes_Red[i].solicitud = 0;
         pthread_mutex_unlock(&mutexSolicitud);
