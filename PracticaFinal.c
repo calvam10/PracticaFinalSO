@@ -426,10 +426,9 @@ int CalculaMaximaPrioridad(clientes *clientes){
     int maximo =0;
     int i=0;
     while(clientes[i]!=NULL){
-        if(cliente[i].atendido==0){
+        if(clientes[i].atendido==0){
             if(clientes[i].prioridad>maximo){
                 maximo = clientes[i].prioridad;
-                posicion = i;
             }
         }
         i++;
@@ -499,7 +498,7 @@ void AccionesResponsables(void *Responsable){
                         pthread_mutex_unlock(&mutexLog);   
                     } 
                     pthread_mutex_lock(&mutexAtendido);
-                    Clientes_Red.atendido = 0;
+                    Clientes_Red->atendido = 0;
                     pthread_mutex_unlock(&mutexAtendido);
                 }
 
@@ -723,7 +722,7 @@ void manejadora(int sig1){ /*Manejadora que trata los clientes de app y clientes
         perror("Error en la señal SIGUSR2\n"); /*Tratamiento de la señal*/
     }else{
         nuevoClienteRed(sig1);
-        exit();
+        exit(0);
     }	
 }
 
@@ -731,7 +730,7 @@ void manejadora2(int sig2){ /*Manejadora que termina el programa*/
     if(signal(SIGINT,manejadora2) == SIG_ERR){
         perror("Error en la señal SIGINT\n"); /*Tratamiento de la señal*/
     }else{
-        exit();
+        exit(0);
     }
 }
 
