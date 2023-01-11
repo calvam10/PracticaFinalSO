@@ -140,8 +140,8 @@ int main(int argc, char* argv[]){
         Tecnicos[i].descanso = 0;
         Tecnicos[i].ocupado = 0;
         Tecnicos[i].contador = 0;
-        pthread_create(&Tecnicos[i].hilo,NULL,AccionTecnico,(*void) Tecnicos[i]);
-        if(pthread_create(&Tecnicos[i].hilo,NULL,AccionTecnico,(*void) Tecnicos[i])!=0){
+        pthread_create(&Tecnicos[i].hilo,NULL,AccionTecnico(),(*void) Tecnicos[i]);
+        if(pthread_create(&Tecnicos[i].hilo,NULL,AccionTecnico(),(*void) Tecnicos[i])!=0){
             perror("Error en la creacion del hilo");
             exit(-1);
         }
@@ -156,8 +156,8 @@ int main(int argc, char* argv[]){
         Responsables[i].descanso = 0;
         Responsables[i].ocupado = 0;
         Responsables[i].contador = 0;
-        pthread_create(&Responsables[i].hilo,NULL,AccionesResponsables,(*void) Responsables[i]);
-        if(pthread_create(&Responsables[i].hilo,NULL,AccionesResponsables,(*void) Responsables[i])!=0){
+        pthread_create(&Responsables[i].hilo,NULL,AccionesResponsables(),(*void) Responsables[i]);
+        if(pthread_create(&Responsables[i].hilo,NULL,AccionesResponsables(),(*void) Responsables[i])!=0){
             perror("Error en la creacion del hilo");
             exit(-1);
         }
@@ -172,8 +172,8 @@ int main(int argc, char* argv[]){
         Encargado[i].descanso = 0;
         Encargado[i].ocupado = 0;
         Encargado[i].contador = 0;
-        pthread_create(&Encargado[i].hilo,NULL,AccionEncargado,(*void) Encargado[i]);
-        if(pthread_create(&Encargado[i].hilo,NULL,AccionEncargado,(*void) Encargado[i])!=0){
+        pthread_create(&Encargado[i].hilo,NULL,AccionEncargado(),(*void) Encargado[i]);
+        if(pthread_create(&Encargado[i].hilo,NULL,AccionEncargado(),(*void) Encargado[i])!=0){
             perror("Error en la creacion del hilo");
             exit(-1);
         }
@@ -304,7 +304,7 @@ void AccionCliente(void *Cliente){
     if(Cliente.tipo==1 && Cliente.solicitud==1){
         int atencion = calculaAleatorios(1,100);
         if(atencion<31){
-            if(clientes.tipo ==1 && clientes.solicitud==2){ /*Si es Cliente de Red*/
+            if(cliente.tipo ==1 && cliente.solicitud==2){ /*Si es Cliente de Red*/
             while(num_solicitudes<4){ 
                 if(num_solicitudes<4){
                     pthread_mutex_lock(&mutexSolicitud);
