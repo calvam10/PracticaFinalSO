@@ -20,6 +20,9 @@ void writeLogMessage ( char * id , char * msg );
 void manejadora(int sig);
 void manejadora2(int sig2);
 int CalculaMaximaPrioridad(clientes *clientes);
+void eliminarClienteRed(int posicion);
+void eliminarClienteApp(int posicion);
+void finalizarPrograma (int signal);
 
 /*Semáforos*/
 
@@ -221,6 +224,27 @@ void nuevoClienteRed(int signal){
     }
 }
 
+int obtenerPosicion(int indice){
+    int posicion = 0;
+    if(Cliente.tipo==0){ /*En el caso que el cliente sea de App*/
+        for(int i=0;i<num_clie_app;i++){
+            if(Cliente.id==indice){
+                return posicion;
+            }
+            posicion++;
+        }
+
+    }else{
+        for(int i=0;i<num_clie_red;i++){
+            if(Cliente.id==indice){
+                return posicion;
+            }
+            posicion++;
+        }
+    }
+
+    return posicion;
+}
 void AccionCliente(void *Cliente){
     char MotivoSalida[100];
     char TipoCliente[100];
@@ -265,7 +289,7 @@ void AccionCliente(void *Cliente){
     pthread_mutex_unlock(&mutexAtendido);
     while(Cliente.atendido==1){
         pthread_mutex_lock(&mutexCola);
-        //el cleinte atendido
+        //el cliente atendido
         pthread_mutex_unlock(&mutexCola);
         sleep(2);
     }
@@ -302,84 +326,90 @@ void AccionCliente(void *Cliente){
         }
     }
     }else{ /*Si es cliente de App o no realiza solicitud domiciliaria */
-            //liberar
+        if(Cliente.tipo==0){  /*Si es Cliente de App*/
+            int aux = obtenerPosicion(Cliente.id)
+            eliminarClienteApp(aux);
+        }else{
+            int aux = obtenerPosicion(Cliente.id);
+            eliminarClienteRed(aux); /*Si es Cliente de Red*/
+        }
+
     }
         
     
 }
 
 void AccionTecnico(void *Tecnico){
-    //WHILE(1)?
-	char MotivoFin[100];
-	char mensajeInicio[100];
-	char mensajeFinal[100];
-	char descanso[100];
-	char findescanso[100];
-    pthread_mutex_lock(&mutexCola);
-    int aux = CalculaMaximaPrioridad(Clientes_App);
-    for(int i=0;i<num_clie_app;i++){
-        if(Clientes_App[i].atendido==0){
-            if(Clientes_App[i].prioridad==aux){
-                pthread_mutex_lock(&mutexAtendido);
-                Clientes_App[i].atendido = 1;
-                pthread_mutex_unlock(&mutexAtendido);
-                int numeroAleatorio = calculaAleatorios(1,100);
-                if(numeroAleatorio<81){
-                    pthread_mutex_lock(&mutexLog);
-                    sprintf(mensajeInicio,"Comienza la atencion del cliente");
-                    writeLogMessage(ficheroLog,mensajeInicio);
-                    sleep(calculaAleatorios(1,4));
-                    sprintf(mensajeFinal,"Termina la atencion del cliente");
-                    writeLogMessage(ficheroLog,mensajeFinal);
-                    sprintf(motivoFin,"El cliente tiene todo en regla y abandona el programa");
-                    writeLogMessage(ficheroLog,motivoFin);
-                    pthread_mutex_unlock(&mutexLog);
-                    
-                }else if(numeroAleatorio<91){
-                    pthread_mutex_lock(&mutexLog);
-                    sprintf(mensajeInicio,"Comienza la atencion del cliente");
-                    writeLogMessage(ficheroLog,mensajeInicio);
-                    sleep(calculaAleatorios(2,6));
-                    sprintf(mensajeFinal,"Termina la atencion del cliente");
-                    writeLogMessage(ficheroLog,mensajeFinal);
-                    sprintf(motivoFin, "El Cliente no se ha identificado correctamente y abandona el programa");
-                    writeLogMessage(ficheroLog,motivoFin);
-                    pthread_mutex_unlock(&mutexLog);
-                }else{
-                    pthread_mutex_lock(&mutexLog);
-                    sprintf(mensajeInicio,"Comienza la atencion del Cliente");
-                    writeLogMessage(ficheroLog,mensajeInicio);
-                    sleep(calculaAleatorios(1,2));
-                    sprintf(mensajeFinal,"Termina la atencion del cliente");
-                    writeLogMessage(ficheroLog,mensajeFinal);
-                    sprintf(motivoFin,"El Cliente se ha confundido de compañia y abandona el programa");
-                    writeLogMessage(ficheroLog,motivoFin);
-                    pthread_mutex_unlock(&mutexLog);
+    while(1){
+        char MotivoFin[100];
+        char mensajeInicio[100];
+        char mensajeFinal[100];
+        char descanso[100];
+        char findescanso[100];
+        pthread_mutex_lock(&mutexCola);
+        int aux = CalculaMaximaPrioridad(Clientes_App);
+        for(int i=0;i<num_clie_app;i++){
+            if(Clientes_App[i].atendido==0){
+                if(Clientes_App[i].prioridad==aux){
+                    pthread_mutex_lock(&mutexAtendido);
+                    Clientes_App[i].atendido = 1;
+                    pthread_mutex_unlock(&mutexAtendido);
+                    int numeroAleatorio = calculaAleatorios(1,100);
+                    if(numeroAleatorio<81){
+                        pthread_mutex_lock(&mutexLog);
+                        sprintf(mensajeInicio,"Comienza la atencion del cliente");
+                        writeLogMessage(ficheroLog,mensajeInicio);
+                        sleep(calculaAleatorios(1,4));
+                        sprintf(mensajeFinal,"Termina la atencion del cliente");
+                        writeLogMessage(ficheroLog,mensajeFinal);
+                        sprintf(motivoFin,"El cliente tiene todo en regla y abandona el programa");
+                        writeLogMessage(ficheroLog,motivoFin);
+                        pthread_mutex_unlock(&mutexLog);
+                        
+                    }else if(numeroAleatorio<91){
+                        pthread_mutex_lock(&mutexLog);
+                        sprintf(mensajeInicio,"Comienza la atencion del cliente");
+                        writeLogMessage(ficheroLog,mensajeInicio);
+                        sleep(calculaAleatorios(2,6));
+                        sprintf(mensajeFinal,"Termina la atencion del cliente");
+                        writeLogMessage(ficheroLog,mensajeFinal);
+                        sprintf(motivoFin, "El Cliente no se ha identificado correctamente y abandona el programa");
+                        writeLogMessage(ficheroLog,motivoFin);
+                        pthread_mutex_unlock(&mutexLog);
+                    }else{
+                        pthread_mutex_lock(&mutexLog);
+                        sprintf(mensajeInicio,"Comienza la atencion del Cliente");
+                        writeLogMessage(ficheroLog,mensajeInicio);
+                        sleep(calculaAleatorios(1,2));
+                        sprintf(mensajeFinal,"Termina la atencion del cliente");
+                        writeLogMessage(ficheroLog,mensajeFinal);
+                        sprintf(motivoFin,"El Cliente se ha confundido de compañia y abandona el programa");
+                        writeLogMessage(ficheroLog,motivoFin);
+                        pthread_mutex_unlock(&mutexLog);
+                    }
+                    pthread_mutex_lock(&mutexAtendido);
+                    Clientes_App[i].atendido = 0;
+                    pthread_mutex_unlock(&mutexAtendido);
                 }
-                pthread_mutex_lock(&mutexAtendido);
-                Clientes_App[i].atendido = 0;
-                pthread_mutex_unlock(&mutexAtendido);
             }
         }
+        Tecnico.contador +=1;
+        if(Tecnico.contador%5==0){
+            pthread_mutex_lock(&mutexDescanso);
+            pthread_mutex_lock(&mutexLog);
+            sprintf(descanso,"Inicia el descando del tecnico");
+            writeLogMessage(logFile,descanso);
+            Tecnico.descanso = 1;
+            sleep(5);
+            Tecnicos.descanso = 0;
+            sprintf(findescanso,"Termina el descando del tecnico");
+            writeLogMessage(logFile,findescanso);
+            pthread_mutex_unlock(&mutexLog);
+            pthread_mutex_unlock(&mutexDescanso);
+        }
+        pthread_mutex_unlock(&mutexCola);
     }
-    Tecnico.contador +=1;
-    if(Tecnico.contador%5==0){
-        pthread_mutex_lock(&mutexDescanso);
-        pthread_mutex_lock(&mutexLog);
-        sprintf(descanso,"Inicia el descando del tecnico");
-        writeLogMessage(logFile,descanso);
-        Tecnico.descanso = 1;
-        sleep(5);
-        Tecnicos.descanso = 0;
-        sprintf(findescanso,"Termina el descando del tecnico");
-        writeLogMessage(logFile,findescanso);
-        pthread_mutex_unlock(&mutexLog);
-        pthread_mutex_unlock(&mutexDescanso);
-    }
-    pthread_mutex_unlock(&mutexCola)
-    AccionTecnico(Tecnico);
-
-    
+   
 }
 
 /*Funcion que calcula el cliente no atendido con la mayor prioridad*/
@@ -388,7 +418,7 @@ int CalculaMaximaPrioridad(clientes *clientes){
     int maximo =0;
     int i=0;
     while(clientes[i]!=NULL){
-        if(cleinte[i].atendido==0){
+        if(cliente[i].atendido==0){
             if(clientes[i].prioridad>maximo){
                 maximo = clientes[i].prioridad;
                 posicion = i;
@@ -400,89 +430,89 @@ int CalculaMaximaPrioridad(clientes *clientes){
 
 }
 void AccionesResponsables(void *Responsable){
-    //while(1)
-    char MotivoFin[100];
-	char mensajeInicio[100];
-	char mensajeFinal[100];
-	char descanso[100];
-	char findescanso[100];
-    pthread_mutex_lock(&mutexCola);
-    int aux = CalculaMaximaPrioridad(Clientes_Red);
-    for(int i=0;i<num_clie_red;i++){
-        if(Clientes_Red[i].atendido==0){
-            if(Clientes_Red[i].prioridad==aux){
-                pthread_mutex_lock(&mutexAtendido);
-                Clientes_Red[i].atendido = 1;
-                pthread_mutex_unlock(&mutexAtendido);
-                int numeroAleatorio = calculaAleatorios(1,100)
-                if(numeroAleatorio<81){
-                    pthread_mutex_lock(&mutexLog);
-                    sprintf(mensajeInicio,"Comienza la atencion del cliente");
-                    writeLogMessage(ficheroLog,mensajeInicio);
-                    sleep(calculaAleatorios(1,4));
-                    sprintf(mensajeFinal,"Termina la atencion del cliente");
-                    writeLogMessage(ficheroLog,mensajeFinal);
-                    int atencion = numeroAleatorio(1,10);
-                    if(atencion<4){
-                        Clientes_Red[i].solicutud=1;
-                        sprintf(motivoFin,"El cliente tiene todo en regla y  solicita atencion domiciliaria, por lo que sigue en el programa esperando");
-                        writeLogMessage(ficheroLog,motivoFin);
+    while(1){
+        char MotivoFin[100];
+	    char mensajeInicio[100];
+        char mensajeFinal[100];
+        char descanso[100];
+        char findescanso[100];
+        pthread_mutex_lock(&mutexCola);
+        int aux = CalculaMaximaPrioridad(Clientes_Red);
+        for(int i=0;i<num_clie_red;i++){
+            if(Clientes_Red[i].atendido==0){
+                if(Clientes_Red[i].prioridad==aux){
+                    pthread_mutex_lock(&mutexAtendido);
+                    Clientes_Red[i].atendido = 1;
+                    pthread_mutex_unlock(&mutexAtendido);
+                    int numeroAleatorio = calculaAleatorios(1,100)
+                    if(numeroAleatorio<81){
+                        pthread_mutex_lock(&mutexLog);
+                        sprintf(mensajeInicio,"Comienza la atencion del cliente");
+                        writeLogMessage(ficheroLog,mensajeInicio);
+                        sleep(calculaAleatorios(1,4));
+                        sprintf(mensajeFinal,"Termina la atencion del cliente");
+                        writeLogMessage(ficheroLog,mensajeFinal);
+                        int atencion = numeroAleatorio(1,10);
+                        if(atencion<4){
+                            Clientes_Red[i].solicutud=1;
+                            sprintf(motivoFin,"El cliente tiene todo en regla y  solicita atencion domiciliaria, por lo que sigue en el programa esperando");
+                            writeLogMessage(ficheroLog,motivoFin);
+                        }else{
+                            sprintf(motivoFin,"El cliente tiene todo en regla y no solicita atencion domiciliaria, por lo que abandona el programa ");
+                            writeLogMessage(ficheroLog,motivoFin);
+                        }
+                        pthread_mutex_unlock(&mutexLog)
+                    }else if(numeroAleatorio<91){
+                        pthread_mutex_lock(&mutexLog);
+                        sprintf(mensajeInicio,"Comienza la atencion del cliente");
+                        writeLogMessage(ficheroLog,mensajeInicio);
+                        sleep(calculaAleatorios(2,6));
+                        sprintf(mensajeFinal,"Termina la atencion del cliente");
+                        writeLogMessage(ficheroLog,mensajeFinal);
+                        int atencion = numeroAleatorio(1,10);
+                        if(atencion<4){
+                            Clientes_Red[i].solicutud=1;
+                            sprintf(motivoFin,"El Cliente no se ha identificado correctamente y solicita atencion domiciliaria, por lo que continua el programa esperando");
+                            writeLogMessage(ficheroLog,motivoFin);
+                        }else{
+                            sprintf(motivoFin,"El Cliente no se ha identificado correctamente y no solicita atencion domiciliaria, por lo que abandona el programa");
+                            writeLogMessage(ficheroLog,motivoFin);
+                        }
+                        pthread_mutex_unlock(&mutexLog)
                     }else{
-                        sprintf(motivoFin,"El cliente tiene todo en regla y no solicita atencion domiciliaria, por lo que abandona el programa ");
+                        pthread_mutex_lock(&mutexLog);
+                        sprintf(mensajeInicio,"Comienza la atencion del cliente");
+                        writeLogMessage(ficheroLog,mensajeInicio);
+                        sleep(calculaAleatorios(1,2));
+                        sprintf(mensajeFinal,"Termina la atencion del cliente");
+                        writeLogMessage(ficheroLog,mensajeFinal);
+                        sprintf(motivoFin,"El Cliente se ha confundido de compañia y abandona el programa");
                         writeLogMessage(ficheroLog,motivoFin);
-                    }
-                    pthread_mutex_unlock(&mutexLog)
-                }else if(numeroAleatorio<91){
-                    pthread_mutex_lock(&mutexLog);
-                    sprintf(mensajeInicio,"Comienza la atencion del cliente");
-                    writeLogMessage(ficheroLog,mensajeInicio);
-                    sleep(calculaAleatorios(2,6));
-                    sprintf(mensajeFinal,"Termina la atencion del cliente");
-                    writeLogMessage(ficheroLog,mensajeFinal);
-                    int atencion = numeroAleatorio(1,10);
-                    if(atencion<4){
-                        Clientes_Red[i].solicutud=1;
-                        sprintf(motivoFin,"El Cliente no se ha identificado correctamente y solicita atencion domiciliaria, por lo que continua el programa esperando");
-                        writeLogMessage(ficheroLog,motivoFin);
-                    }else{
-                        sprintf(motivoFin,"El Cliente no se ha identificado correctamente y no solicita atencion domiciliaria, por lo que abandona el programa");
-                        writeLogMessage(ficheroLog,motivoFin);
-                    }
-                    pthread_mutex_unlock(&mutexLog)
-                }else{
-                    pthread_mutex_lock(&mutexLog);
-                    sprintf(mensajeInicio,"Comienza la atencion del cliente");
-                    writeLogMessage(ficheroLog,mensajeInicio);
-                    sleep(calculaAleatorios(1,2));
-                    sprintf(mensajeFinal,"Termina la atencion del cliente");
-                    writeLogMessage(ficheroLog,mensajeFinal);
-                    sprintf(motivoFin,"El Cliente se ha confundido de compañia y abandona el programa");
-                    writeLogMessage(ficheroLog,motivoFin);
-                    pthread_mutex_unlock(&mutexLog);   
-                } 
-                pthread_mutex_lock(&mutexAtendido);
-                Clientes_Red.atendido = 0;
-                pthread_mutex_unlock(&mutexAtendido);
-            }
+                        pthread_mutex_unlock(&mutexLog);   
+                    } 
+                    pthread_mutex_lock(&mutexAtendido);
+                    Clientes_Red.atendido = 0;
+                    pthread_mutex_unlock(&mutexAtendido);
+                }
 
+            }
         }
+        Responsable.contador +=1;
+        if(Responsable.contador%6==0){
+            pthread_mutex_lock(&mutexDescanso);
+            Responsable.descanso = 1;
+            sleep(5);
+            Responsable.descanso = 0;
+            pthread_mutex_unlock(&mutexDescanso);
+        }
+        pthread_mutex_unlock(&mutexCola);
     }
-    Responsable.contador +=1;
-    if(Responsable.contador%6==0){
-        pthread_mutex_lock(&mutexDescanso);
-        Responsable.descanso = 1;
-        sleep(5);
-        Responsable.descanso = 0;
-        pthread_mutex_unlock(&mutexDescanso);
-    }
-    pthread_mutex_unlock(&mutexCola);
-    AccionesResponsables(Responsable);
-    }
+        
+}
 
 
 void AccionEncargado(void *Encargado){
     while(1){
-
         if(num_clie_red==0){ /*En el caso que no haya Clientes de Red miramos si hay de App*/
             if(num_clie_app==0){ /*En el caso que no haya Clientes en la cola dormimos y volvemos a comprobar en 3 segundas*/
                 sleep(3);
@@ -712,11 +742,47 @@ int calculaAleatorios(int min, int max){
 	return rand() % (max-min+1) + min;
 }
 
-void finalizar(int sig) {
-    int i = 0;
-    while(1 < ) {
+void finalizarPrograma (int signal) {
+    //Antes de que finalice se debe terminar de atender a todos los clientes en cola
+    //Hilos tienen que terminar de forma correcta, se libera memoria, etc.
+    char final[100];
+    printf("\nSe ha recibido la señal SIGINT. Procediendo a finalizar el programa...\n");
 
+    //Se escribe en el log que se va a finalizar el programa/
+    pthread_mutex_lock(&mutexLog);
+    sprintf(final, "El programa se va a finalizar. ");
+    writeLogMessage(ficheroLog, final);
+    pthread_mutex_unlock(&mutexLog);
+
+    pthread_mutex_lock(&mutexCola);
+    //Se ponen las solicitudes domiciliarias a 0
+    num_solicitudes = 0;
+
+    //A cada cliente se le cambia la flag de solicitud a 0 y espera a que termine de ser atendido para finalizar los hilos de los trabajadores
+    for (int i = 0; i < Clientes_Red; i++) {
+        pthread_mutex_lock(&mutexSolicitud);
+        Clientes_Red[i].solicitud = 0;
+        pthread_mutex_unlock(&mutexSolicitud);
     }
+
+    pthread_mutex_unlock(&mutexCola);
+
+    /*Liberamos la memoria */
+
+    free(Clientes_App);
+    free(Clientes_Red);
+
+    /*Destruimos los mutex*/
+
+    pthread_mutex_destroy(&mutexCola);
+    pthread_mutex_destroy(&mutexAtendido);
+    pthread_mutex_destroy(&mutexSolicitud);
+    pthread_mutex_destroy(&mutexLog);
+    pthread_mutex_destroy(&mutexDescanso);
+    
+    printf("\nAdiós!\n");
+
+    exit(0);
 }
 
 void eliminarClienteApp(int posicion) {
