@@ -37,10 +37,12 @@ pthread_cond_t FinAtencionDomiciliaria;
 
 int num_clie_app;  //Contador Clientes App
 int num_clie_red;  //Contador Clientes Red
+int numclientes; //Contador de Clientes en Total
 int num_solicitudes; //Contador Solicitudes Atención Domiciliaria
-int contador_ID_App //Contador del ID de los clientes de App
-int contador_ID_Red //Contador del ID de los clientes de Red
+int contador_ID_App; //Contador del ID de los clientes de App
+int contador_ID_Red; //Contador del ID de los clientes de Red
 
+struct sigaction e;
 /*Clientes*/
 
 typedef struct{
@@ -93,7 +95,7 @@ int main(int argc, char* argv[]){
         perror("Error al recibir la llamada SIGUSR2\n");
         exit(-1);
     } 
-    if(signal(SIGINT,salirPrograma)==SIG_ERR){	
+    if(signal(SIGINT,finalizarPrograma)==SIG_ERR){	
 		//salimos del programa
 		exit(-1);
 	}
@@ -107,8 +109,7 @@ int main(int argc, char* argv[]){
     pthread_mutex_init(&mutexDescanso,NULL);
     pthread_mutex_init(&mutexAtendido,NULL);
     pthread_mutex_init(&mutexSolicitud,NULL);
-    pthread_cond_init(&InicioAtencionDomiciliaria);
-    pthread_cond_init(&FinAtencionDomiciliaria);
+
 
     /*Variables numéricas*/
 
@@ -121,7 +122,7 @@ int main(int argc, char* argv[]){
 
     /*Inicializamos a los clientes sin determinar si son de App o de Red*/
 
-    Clientes = (clientes*)malloc(max_num_cola*sizeof(clientes));
+    clientes = ((clientes*)malloc(max_num_cola*sizeof(clientes)));
     for(int i =0;i<max_num_cola;i++){
         //mutex?
         Clientes[i].id = 0;
@@ -186,6 +187,8 @@ int main(int argc, char* argv[]){
     //Variables Atencion Domiciliaria
 
     //Variables Condicion
+    pthread_cond_init(&InicioAtencionDomiciliaria,NULL);
+    pthread_cond_init(&FinAtencionDomiciliaria,NULL);
 
     
     /*Bucle infinito*/
@@ -202,27 +205,28 @@ void nuevoClienteRed(int signal){
         
         switch(signal){
             case SIGUSR1:  //Clientes de App
-                Clientes_App[numclientes].tipo = 0:
+                Clientes_App[numclientes].tipo = 0;
                 Clientes_App[numclientes].id = contador_ID_App + 1;
                 Clientes_App[numclientes].atendido = 0;
                 Clientes_App[numclientes].prioridad = calculaAleatorios(1,10);
-                Clientes_App[numclientes].solicutud = 0;
+                Clientes_App[numclientes].solicitud = 0;
                 num_clie_app++;
+                contador_ID_App++;
             break;
             case SIGUSR2:   //Clientes de Red
                 Clientes_Red[numclientes].tipo =1;
-                Clientes_Red[numClientes].id = contador_ID_Red + 1;
+                Clientes_Red[numclientes].id = contador_ID_Red + 1;
                 Clientes_Red[numclientes].atendido = 0;
                 Clientes_Red[numclientes].prioridad = calculaAleatorios(1,10);
-                Clientes_Red[numclientes].solicutud = 0;
+                Clientes_Red[numclientes].solicitud = 0;
                 num_clie_red++;
+                contador_ID_Red++;
             break;
         }
-        numclientes++;
-        contadorID++;
+        
     
         pthread_create(&thread_id, NULL, myThreadFun, NULL);//Corregir
-        
+        pthread_mutex_unlock(&mutexCola);
     }else{
         printf("La cola de atencion esta llena\n");
     }
@@ -297,7 +301,7 @@ void AccionCliente(void *Cliente){
         pthread_mutex_unlock(&mutexCola);
         sleep(2);
     }
-    if(Cliente.tipo==1 && Cliente.solicutud==1){
+    if(Cliente.tipo==1 && Cliente.solicitud==1){
         int atencion = calculaAleatorios(1,100);
         if(atencion<31){
             if(clientes.tipo ==1 && clientes.solicutud==2){ /*Si es Cliente de Red*/
@@ -309,7 +313,7 @@ void AccionCliente(void *Cliente){
                     sprintf(Espera,"El cliente esta esperando a ser atendido");
                     writeLogMessage(ficheroLog,Espera);
                     pthread_mutex_lock(&mutexCola);
-                    clientes.solicutud=1;
+                    clientes.solicitud=1;
                     pthread_mutex_unlock(&mutexCola);
                     if(num_solicitudes==4){
                         pthread_mutex_lock(&mutexSolicitud);
@@ -475,7 +479,7 @@ void AccionesResponsables(void *Responsable){
                         writeLogMessage(ficheroLog,mensajeFinal);
                         int atencion = calculaAleatorios(1,10);
                         if(atencion<4){
-                            Clientes_Red[i].solicutud=1;
+                            Clientes_Red[i].solicitud=1;
                             sprintf(motivoFin,"El Cliente no se ha identificado correctamente y solicita atencion domiciliaria, por lo que continua el programa esperando");
                             writeLogMessage(ficheroLog,motivoFin);
                         }else{
@@ -577,7 +581,7 @@ void AccionEncargado(void *Encargado){
                 }else{ /*En el caso que haya Clientes de App los tratamos*/
                     for(int i=0;i<num_clie_app;i++){
                         int prioridadApp = CalculaMaximaPrioridad(Clientes_App);
-                        if(Clientes_App[i].prioridadApp==prioridadApp){
+                        if(Clientes_App[i].prioridad==prioridadApp){
                             pthread_mutex_lock(&mutexAtendido);
                             Clientes_App[i].atendido = 1;
                             pthread_mutex_unlock(&mutexAtendido);
